@@ -138,17 +138,21 @@ class DuplicateFiles:
     def get_file_numbers(self):
         format_is_bad = True
         while format_is_bad:
-            print()
-            print("Enter file numbers to delete:")
+            print("\nEnter file numbers to delete:")
             ans = input()
+            if not ans:
+                print("Wrong format")
+                continue
+
             try:
-                if not ans:
-                    raise ValueError
                 self.file_numbers = list(map(int, ans.split()))
-                if any([num > len(self.file_names_by_number) for num in self.file_numbers]):
-                    raise ValueError
-                format_is_bad = False
             except ValueError:
+                print("Wrong format")
+                continue
+
+            if all([num <= len(self.file_names_by_number) for num in self.file_numbers]):
+                format_is_bad = False
+            else:
                 print("Wrong format")
 
     def delete_duplicate_files(self):
