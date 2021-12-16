@@ -142,6 +142,8 @@ class DuplicateFiles:
             print("Enter file numbers to delete:")
             ans = input()
             try:
+                if not ans:
+                    raise ValueError
                 self.file_numbers = list(map(int, ans.split()))
                 if any([num > len(self.file_names_by_number) for num in self.file_numbers]):
                     raise ValueError
