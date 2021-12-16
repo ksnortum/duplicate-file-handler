@@ -72,10 +72,9 @@ class DuplicateFiles:
             self.sorted_keys = sorted(self.same_size_files.keys(), reverse=True)
 
     def print_same_size_files(self):
-        for key in self.sorted_keys:
-            print()
-            print(key, "bytes")
-            for path in self.same_size_files[key]:
+        for file_size in self.sorted_keys:
+            print(f"\n{file_size} bytes")
+            for path in self.same_size_files[file_size]:
                 print(path)
 
     def ask_search_for_duplicates(self):
@@ -85,22 +84,19 @@ class DuplicateFiles:
         self.get_yes_no_answer("Delete files?", "Wrong option")
 
     @staticmethod
-    def get_yes_no_answer(prompt: str, error: str = ""):
+    def get_yes_no_answer(prompt: str, error_message: str = ""):
         ans = ""
         while ans not in ["yes", "no"]:
-            print()
-            print(prompt)
-            ans = input()
+            ans = input(f"\n{prompt}\n")
 
             if ans == 'no':
                 sys.exit(2)
 
-            if ans != "yes" and error:
-                print(error)
+            if ans != "yes" and error_message:
+                print(error_message)
 
     def get_same_hash_files(self):
         """ same_hash_files = dictionary { file_size: { hash: [ file_name ] } } """
-
         for file_size in self.same_size_files.keys():
             file_names_by_hash = {}
             for file_name in self.same_size_files[file_size]:
@@ -124,8 +120,7 @@ class DuplicateFiles:
         """ Build file_names_by_number: { file_number: { file_name: name, file_size: size } } """
         file_number = 1
         for file_size in self.sorted_keys:
-            print()
-            print(file_size, "bytes")
+            print(f"\n{file_size} bytes")
             for hex_hash in self.same_hash_files[file_size]:
                 if len(self.same_hash_files[file_size][hex_hash]) >= 2:
                     print(f'Hash: {hex_hash}')
