@@ -6,20 +6,31 @@ import hashlib
 
 class DuplicateFiles:
 
-    @staticmethod
-    def get_root() -> str:
+    def __init__(self):
+        self.root_directory = ""
+        self.file_format = ""
+        self.sort_by = 0
+        self.same_size_files = {}
+        self.sorted_keys = []
+        self.same_hash_files = {}
+        self.file_names_by_number = {}
+        self.file_numbers = []
+
+    def get_root(self):
         parser = argparse.ArgumentParser(description="List files in a directory")
         parser.add_argument("directory", nargs="?", default=False)
         args = parser.parse_args()
 
         if not args.directory:
             print("Directory is not specified")
-            return ""
+            sys.exit(1)
 
-        return args.directory
+        self.root_directory = args.directory
 
-    @staticmethod
-    def get_sort_by() -> int:
+    def get_file_format(self):
+        self.file_format = input("Enter file format:\n")
+
+    def get_sort_by(self):
         print("\nSize sorting options:")
         print("1. Descending")
         print("2. Ascending")
@@ -35,57 +46,71 @@ class DuplicateFiles:
             else:
                 print("\nWrong option")
 
-        return option
+        self.sort_by = option
 
-    @staticmethod
-    def get_same_size_files(root_directory: str, file_format: str) -> dict:
-        """ Returns a dictionary: { file_size: [ file_path ] } """
+    def get_same_size_files(self):
+        """ same_size_files = dictionary { file_size: [ file_path ] } """
         all_files = {}
-
-        for root, dirs, files in os.walk(root_directory):
+        for root, dirs, files in os.walk(self.root_directory):
             for name in files:
                 _, ext = os.path.splitext(name)
-                if not file_format or file_format == ext[1:]:
+                if not self.file_format or self.file_format == ext[1:]:
                     path = os.path.join(root, name)
                     file_size = os.path.getsize(path)
                     if file_size not in all_files:
                         all_files[file_size] = []
                     all_files[file_size].append(path)
 
-        same_size_files = {}
         for key in all_files:
             if len(all_files[key]) >= 2:
-                same_size_files[key] = all_files[key]
+                self.same_size_files[key] = all_files[key]
 
-        return same_size_files
+    def sort_keys(self):
+        if self.sort_by == 2:
+            self.sorted_keys = sorted(self.same_size_files.keys())
+        else:
+            self.sorted_keys = sorted(self.same_size_files.keys(), reverse=True)
+
+    def print_same_size_files(self):
+        for key in self.sorted_keys:
+            print()
+            print(key, "bytes")
+            for path in self.same_size_files[key]:
+                print(path)
+
+    def ask_search_for_duplicates(self):
+        self.get_yes_no_answer("Check for duplicates?")
+
+    def ask_delete_files(self):
+        self.get_yes_no_answer("Delete files?", "Wrong option")
 
     @staticmethod
-    def search_for_duplicates() -> bool:
+    def get_yes_no_answer(prompt: str, error: str = ""):
         ans = ""
         while ans not in ["yes", "no"]:
-            print("\nCheck for duplicates?")
+            print()
+            print(prompt)
             ans = input()
 
-        return ans == 'yes'
+            if ans == 'no':
+                sys.exit(2)
 
-    def get_same_hash_files(self, same_size_files: dict) -> dict:
-        """
-        In: dictionary { file_size: [ file_path ] }
-        Returns a dictionary { file_size: { hash: [ file_name ] } }
-        """
-        same_hash_files = {}
-        for file_size in same_size_files.keys():
+            if ans != "yes" and error:
+                print(error)
+
+    def get_same_hash_files(self):
+        """ same_hash_files = dictionary { file_size: { hash: [ file_name ] } } """
+
+        for file_size in self.same_size_files.keys():
             file_names_by_hash = {}
-            for file_name in same_size_files[file_size]:
+            for file_name in self.same_size_files[file_size]:
                 h = hashlib.md5()
                 h.update(self.get_file_in_bytes(file_name))
                 hex_hash = h.hexdigest()
                 if hex_hash not in file_names_by_hash:
                     file_names_by_hash[hex_hash] = []
                 file_names_by_hash[hex_hash].append(file_name)
-            same_hash_files[file_size] = file_names_by_hash
-
-        return same_hash_files
+            self.same_hash_files[file_size] = file_names_by_hash
 
     @staticmethod
     def get_file_in_bytes(file_name: str) -> bytes:
@@ -95,41 +120,56 @@ class DuplicateFiles:
 
         return file_bytes
 
-    def main(self):
-        root_directory = self.get_root()
-        if not root_directory:
-            sys.exit(1)
-
-        file_format = input("Enter file format:\n")
-        sort_by = self.get_sort_by()
-        same_size_files = self.get_same_size_files(root_directory, file_format)
-
-        if sort_by == 2:
-            sorted_keys = sorted(same_size_files.keys())
-        else:
-            sorted_keys = sorted(same_size_files.keys(), reverse=True)
-
-        for key in sorted_keys:
-            print()
-            print(key, "bytes")
-            for path in same_size_files[key]:
-                print(path)
-
-        if not self.search_for_duplicates():
-            sys.exit(2)
-
-        same_hash_files = self.get_same_hash_files(same_size_files)
+    def print_same_hash_files(self):
+        """ Build file_names_by_number: { file_number: { file_name: name, file_size: size } } """
         file_number = 1
-
-        for key in sorted_keys:
+        for file_size in self.sorted_keys:
             print()
-            print(key, "bytes")
-            for hex_hash in same_hash_files[key]:
-                if len(same_hash_files[key][hex_hash]) >= 2:
+            print(file_size, "bytes")
+            for hex_hash in self.same_hash_files[file_size]:
+                if len(self.same_hash_files[file_size][hex_hash]) >= 2:
                     print(f'Hash: {hex_hash}')
-                    for file_name in same_hash_files[key][hex_hash]:
+                    for file_name in self.same_hash_files[file_size][hex_hash]:
                         print(f'{file_number}. {file_name}')
+                        elem = {"file_name": file_name, "file_size": file_size}
+                        self.file_names_by_number[file_number] = elem
                         file_number += 1
+
+    def get_file_numbers(self):
+        format_is_bad = True
+        while format_is_bad:
+            print()
+            print("Enter file numbers to delete:")
+            ans = input()
+            try:
+                self.file_numbers = list(map(int, ans.split()))
+                if any([num > len(self.file_names_by_number) for num in self.file_numbers]):
+                    raise ValueError
+                format_is_bad = False
+            except ValueError:
+                print("Wrong format")
+
+    def delete_duplicate_files(self):
+        total_freed_space = 0
+        for file_number in self.file_numbers:
+            os.remove(self.file_names_by_number[file_number]["file_name"])
+            total_freed_space += self.file_names_by_number[file_number]["file_size"]
+
+        print(f"\nTotal freed up space: {total_freed_space} bytes")
+
+    def main(self):
+        self.get_root()
+        self.get_file_format()
+        self.get_sort_by()
+        self.get_same_size_files()
+        self.sort_keys()
+        self.print_same_size_files()
+        self.ask_search_for_duplicates()
+        self.get_same_hash_files()
+        self.print_same_hash_files()
+        self.ask_delete_files()
+        self.get_file_numbers()
+        self.delete_duplicate_files()
 
 
 if __name__ == "__main__":
